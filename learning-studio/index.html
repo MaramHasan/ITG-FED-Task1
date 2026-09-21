@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#164e41">
+  <meta name="description" content="Your personal learning space. Discover courses, build new skills, and make progress every day.">
+  <title>Overview · MyCourses</title>
+  <link rel="icon" href="assets/brand.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script src="courses.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a href="#main" class="skip-link">Skip to content</a>
+  <button class="sidebar-overlay" aria-label="Close navigation" tabindex="-1" hidden></button>
+  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+    <a class="brand" href="#overview"><img src="assets/brand.svg" alt="" width="35" height="35">MyCourses<span class="brand-dot">.</span></a>
+    <div class="workspace-label">YOUR LEARNING SPACE</div>
+    <nav class="main-nav">
+      <a href="#overview" data-route="overview"><span data-icon="grid"></span>Overview</a>
+      <a href="#explore" data-route="explore"><span data-icon="compass"></span>Explore courses<span class="nav-new">NEW</span></a>
+      <a href="#learning" data-route="learning"><span data-icon="book"></span>My learning<span id="learning-count" class="nav-count">2</span></a>
+      <a href="#favorites" data-route="favorites"><span data-icon="heart"></span>Favorites<span id="favorites-count" class="nav-count">0</span></a>
+      <div class="nav-divider"></div>
+      <a href="#profile" data-route="profile"><span data-icon="user"></span>My profile</a>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="growth-card"><span class="growth-icon" data-icon="sparkles"></span><h3>A little every day.<br>A long way together.</h3><p>Build a learning habit that lasts.</p><button class="button button-light" data-action="goal">Set your weekly goal <span data-icon="arrow"></span></button></div>
+      <button class="help-link" data-action="help"><span data-icon="help"></span>Help & getting started<span data-icon="external"></span></button>
+      <a href="#profile" class="sidebar-profile"><span class="avatar profile-initials">AM</span><span><strong class="profile-name">Alex Morgan</strong><small>Personal account</small></span><span data-icon="chevron"></span></a>
+    </div>
+  </aside>
+  <div class="app-shell">
+    <header class="topbar">
+      <button class="icon-button menu-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="sidebar"><span data-icon="menu"></span></button>
+      <div class="breadcrumb">Workspace<span>/</span><strong id="page-label">Overview</strong></div>
+      <form class="global-search" role="search" id="search-form"><span data-icon="search"></span><label class="sr-only" for="global-search">Search all courses, topics, and instructors</label><input id="global-search" type="search" placeholder="Search courses, skills, instructors..." autocomplete="off"><kbd>Ctrl K</kbd></form>
+      <div class="topbar-actions"><button class="icon-button notification-button" data-action="notifications" aria-label="View learning updates"><span data-icon="bell"></span><span class="notification-dot"></span></button><span class="topbar-divider"></span><a href="#profile" class="avatar profile-initials" aria-label="Your profile">AM</a></div>
+    </header>
+    <main id="main" tabindex="-1"></main>
+    <footer class="app-footer"><span>Made for your next chapter.</span><span>MyCourses <span aria-hidden="true">✦</span> Keep growing.</span></footer>
+  </div>
+  <dialog id="app-dialog" aria-labelledby="dialog-title"><div id="dialog-content"></div></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <noscript><div class="noscript">Enable JavaScript to use the learning dashboard.</div></noscript>
+</body>
+</html>
