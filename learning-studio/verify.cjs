@@ -110,6 +110,7 @@ const server = http.createServer((req, res) => {
     await page.waitForSelector('#profile-form');
 
     await require('./verify-workspace.cjs')({ page, address, context });
+    await require('./verify-appearance.cjs')({ browser, address });
 
     // Every page stays within the viewport at common desktop, tablet, and phone widths.
     for (const width of [1440, 1024, 768, 700, 390, 320]) {

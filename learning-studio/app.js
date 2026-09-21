@@ -7,6 +7,9 @@
   const $ = (selector, root = document) => root.querySelector(selector);
   const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
   const icons = {
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/>',
+    moon: '<path d="M20.5 13.2A8.5 8.5 0 0 1 10.8 3.5a8.5 8.5 0 1 0 9.7 9.7Z"/>',
+    monitor: '<rect x="3" y="3" width="18" height="13" rx="2"/><path d="M12 16v5m-5 0h10"/>',
     route: '<circle cx="6" cy="5" r="2"/><circle cx="18" cy="19" r="2"/><path d="M8 5h8a4 4 0 0 1 0 8H8a3 3 0 0 0 0 6h8"/>',
     note: '<path d="M14 3H5v18h14V8Zm0 0v5h5M8 12h8M8 16h5"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
@@ -102,6 +105,29 @@
     toastTimer = setTimeout(() => $('#toast').classList.remove('visible'), 4000);
   }
   function saveMessage(message) { toast(storageAvailable ? message : `${message} Browser storage is unavailable; changes last for this session.`); }
+  const appearance = window.STUDIO_APPEARANCE;
+  const appearanceLabels = { light: 'Light', dark: 'Dark', system: 'System' };
+  function syncAppearance() {
+    const dark = appearance.theme === 'dark';
+    const button = $('.appearance-toggle');
+    button.innerHTML = icon(dark ? 'sun' : 'moon');
+    button.setAttribute('aria-label', `Switch to ${dark ? 'light' : 'dark'} mode`);
+    button.title = `Switch to ${dark ? 'light' : 'dark'} mode`;
+    document.querySelectorAll('[data-appearance-summary]').forEach(el => {
+      el.textContent = `${appearanceLabels[appearance.preference]}${appearance.preference === 'system' ? ` · currently ${appearance.theme}` : ''}`;
+    });
+    document.querySelectorAll('input[name="appearance"]').forEach(input => { input.checked = input.value === appearance.preference; });
+  }
+  function setAppearance(value) {
+    const saved = appearance.set(value);
+    toast(saved ? `${appearanceLabels[appearance.preference]} appearance saved.` : 'Appearance changed. Browser storage is unavailable; this choice lasts for this session.');
+  }
+  function appearanceDialog() {
+    openDialog(`${dialogHeader('Make yourself at home.', 'YOUR PREFERENCES')}<div class="dialog-body"><p>Choose the look that feels right. System follows your device’s light or dark setting automatically.</p><fieldset class="appearance-options"><legend>Appearance</legend>${[['light', 'sun', 'A bright, fresh canvas'], ['dark', 'moon', 'A softer glow after hours'], ['system', 'monitor', 'In sync with your device']].map(([value, symbol, description]) => `<label class="appearance-option"><input type="radio" name="appearance" value="${value}"${appearance.preference === value ? ' checked' : ''}><span class="appearance-preview preview-${value}" aria-hidden="true"><i></i><span><b></b><em></em><em></em></span></span><span class="appearance-option-title">${icon(symbol)}${appearanceLabels[value]}</span><small>${description}</small></label>`).join('')}</fieldset><div class="form-footer"><p>Changes apply instantly.<br>Current preference: <strong data-appearance-summary></strong></p><button class="button button-primary" data-action="close">Done ${icon('check')}</button></div></div>`);
+    syncAppearance();
+  }
+  document.addEventListener('studio:appearance', syncAppearance);
+  syncAppearance();
   function updateShell() {
     document.querySelectorAll('.profile-name').forEach(el => { el.textContent = state.profile.name; });
     document.querySelectorAll('.profile-initials').forEach(el => { el.textContent = initials(state.profile.name); });
@@ -117,7 +143,20 @@
   }
   function heading(title, subtitle, extra = '') { return `<div class="page-heading"><div><h1>${title}</h1><p>${subtitle}</p></div>${extra}</div>`; }
   function empty(title, description, action = '<a class="button button-primary" href="#explore">Explore courses ' + icon('arrow') + '</a>', symbol = 'book') { return `<div class="empty-state">${icon(symbol)}<h2>${title}</h2><p>${description}</p>${action}</div>`; }
-  function courseArt(course, favorite = true) { return `<div class="course-art ${course.color}">${course.label ? `<span class="course-label">${course.label}</span>` : ''}${favorite ? `<button class="favorite-button" data-action="favorite" data-id="${course.id}" aria-label="${state.favorites.includes(course.id) ? 'Remove' : 'Save'} ${escape(course.title)} ${state.favorites.includes(course.id) ? 'from' : 'to'} favorites" aria-pressed="${state.favorites.includes(course.id)}">${icon('heart')}</button>` : ''}<span class="course-symbol" aria-hidden="true">${escape(course.symbol)}</span><span class="art-tag">${course.tag}</span></div>`; }
+  function courseArt(course, favorite = true) {
+    const previews = {
+      html: '&lt;main&gt;\n  &lt;h1&gt;Hello, world.&lt;/h1&gt;\n  &lt;p&gt;Make it yours.&lt;/p&gt;\n&lt;/main&gt;',
+      css: '.your-next-idea {\n  display: grid;\n  possibilities: endless;\n}',
+      javascript: 'const nextChapter = () =&gt; {\n  learn();\n  build();\n  repeat();\n};',
+      sql: 'SELECT possibility\nFROM your_future\nWHERE curiosity = true;',
+      react: 'function YourNextIdea() {\n  return &lt;SomethingGreat /&gt;;\n}',
+      aspnet: 'app.MapGet("/possibilities",\n  () =&gt; Results.Ok(ideas));',
+      csharp: 'var future = new Chapter();\nfuture.StartLearning();',
+      api: 'GET /v1/possibilities\n200 OK\n{ "ready": true }',
+      data: 'ideas ─── projects\n  │          │\nskills ── possibilities'
+    };
+    return `<div class="course-art ${course.color}">${course.label ? `<span class="course-label">${course.label}</span>` : ''}${favorite ? `<button class="favorite-button" data-action="favorite" data-id="${course.id}" aria-label="${state.favorites.includes(course.id) ? 'Remove' : 'Save'} ${escape(course.title)} ${state.favorites.includes(course.id) ? 'from' : 'to'} favorites" aria-pressed="${state.favorites.includes(course.id)}">${icon('heart')}</button>` : ''}<div class="cover-editor" aria-hidden="true"><div class="cover-editor-bar"><span>● ● ●</span><span>${course.id === 'css' ? 'style.css' : course.id === 'html' ? 'index.html' : 'your-next-idea'}</span></div><pre>${previews[course.id] || ''}</pre></div><span class="course-symbol" aria-hidden="true">${escape(course.symbol)}</span><span class="art-tag">${course.tag}</span></div>`;
+  }
   function courseCard(course, learning = false) {
     const done = progress(course) === 100;
     return `<article class="course-card ${learning ? 'learning-card' : ''}">${courseArt(course)}<div class="course-body"><div class="course-category"><span>${course.category.toUpperCase()}</span><span class="course-rating">${icon('star')} ${course.rating.toFixed(1)} <span class="sr-only">out of 5</span></span></div><h3><button class="course-title" data-action="details" data-id="${course.id}">${course.title}</button></h3><div class="instructor"><span class="instructor-avatar" aria-hidden="true">${initials(course.instructor)}</span>${course.instructor}</div>${learning ? `<div class="progress-line"><div class="progress" role="progressbar" aria-label="${course.title} progress" aria-valuenow="${progress(course)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${progress(course)}%"></span></div><span>${completed(course)} / ${course.topics.length} lessons</span></div><button class="button ${done ? 'button-soft' : 'button-primary'}" data-action="${done ? 'certificate' : 'resume'}" data-id="${course.id}">${icon(done ? 'award' : 'play')}${done ? 'View completion record' : completed(course) ? 'Continue learning' : 'Start first lesson'}</button>` : `<div class="course-meta"><span>${icon('clock')}${course.hours} hours</span><span>${icon('bars')}${course.level}</span><button class="course-link" data-action="details" data-id="${course.id}">View course ${icon('arrow')}<span class="sr-only">: ${course.title}</span></button></div>`}</div></article>`;
@@ -139,7 +178,11 @@
     const active = enrolled().filter(course => progress(course) < 100).slice(0, 2);
     const recommendations = courses.filter(course => category === 'All courses' || course.category === category).slice(0, 3);
     const date = new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date());
-    return `${heading(`A good day to grow, ${escape(state.profile.name.trim().split(/\s+/)[0] || 'Learner')}. <span aria-hidden="true">✧</span>`, 'A little curiosity today. A world of possibilities tomorrow.', `<span class="date-label">${icon('calendar')}${date}</span>`)}<section class="hero" aria-labelledby="hero-title"><div class="hero-copy"><div class="eyebrow">INVEST IN YOURSELF</div><h2 id="hero-title">Your next chapter<br>starts with <em>a new skill.</em></h2><p>Explore practical courses, learn at your own pace,<br>and turn your ambition into something real.</p><a href="#explore" class="button button-primary">Explore courses ${icon('arrow')}</a></div><div class="hero-art" aria-hidden="true"><div class="orbit"></div><div class="code-window"><div class="window-dots"><i></i><i></i><i></i></div><pre>&lt;<b>your-future</b>&gt;\n  curiosity: <b>limitless</b>;\n  potential: <b>infinite</b>;\n  next-step: <b>start</b>;\n&lt;/<b>your-future</b>&gt;</pre></div><span class="floating-symbol one">&lt;/&gt;</span><span class="floating-symbol two">✦</span><span class="hero-spark">✧</span><span class="hero-caption">A WORK IN PROGRESS. JUST LIKE YOU.</span></div></section>${stats()}<div class="overview-middle"><section><div class="section-heading"><div><h2>Pick up where you left off</h2><p>Your next breakthrough is one lesson away.</p></div><a href="#learning" class="text-button">My learning ${icon('arrow')}</a></div><div class="continue-list">${active.length ? active.map(continueCard).join('') : empty('Make room for something new', 'Find your next course and start a new chapter.')}</div></section>${weeklyCard()}</div><section class="recommendations"><div class="section-heading"><div><div class="section-kicker">A LITTLE INSPIRATION</div><h2>Find your next spark</h2></div><a href="#explore" class="text-button">View all courses ${icon('arrow')}</a></div><div class="catalog-toolbar">${categoryTabs()}<span class="results-label" style="margin:0">Handpicked for curious minds</span></div><div class="courses-grid">${recommendations.map(course => courseCard(course)).join('')}</div></section>`;
+    return `${heading(`Welcome back, ${escape(state.profile.name.trim().split(/\s+/)[0] || 'Learner')}. <span class="greeting-spark" aria-hidden="true">✳</span>`, 'A fresh day. A new possibility. Let’s make a little progress.', `<span class="date-label">${icon('calendar')}${date}</span>`)}
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy"><div class="eyebrow">YOUR FUTURE IS A WORK IN PROGRESS</div><h2 id="hero-title">Small steps.<br><em>Extraordinary</em><br>possibilities.</h2><p>Build skills that open doors.<br>Your next chapter starts right here.</p><div class="hero-actions"><a href="#explore" class="button button-primary">Find your next course ${icon('arrow')}</a><a href="#paths" class="hero-secondary">Discover learning paths ${icon('chevron')}</a></div><div class="hero-footnote"><span>${icon('check')}Learn at your pace</span><span>${icon('check')}Build something real</span></div></div>
+        <div class="hero-art" aria-hidden="true"><div class="orbit"></div><div class="orbit-core"><span>stay</span><strong>curious<span>✳</span></strong><small>THERE’S MORE IN YOU.</small></div><div class="hero-sticker sticker-code">&lt;/&gt;<span>MAKE SOMETHING.</span></div><div class="hero-sticker sticker-star">✳</div><div class="hero-sticker sticker-note"><span>NOTE TO SELF</span>Keep going.<br>You’re growing.<span class="note-underline"></span></div><span class="hero-coordinate">LEARN. BUILD. BECOME.</span><span class="hero-spark">✦</span></div>
+      </section>${stats()}<div class="overview-middle"><section><div class="section-heading"><div><div class="section-kicker">KEEP THE MOMENTUM</div><h2>Right where you left off.</h2></div><a href="#learning" class="text-button">My learning ${icon('arrow')}</a></div><div class="continue-list">${active.length ? active.map(continueCard).join('') : empty('Make room for something new', 'Find your next course and start a new chapter.')}</div></section>${weeklyCard()}</div><section class="recommendations"><div class="section-heading"><div><div class="section-kicker">FOLLOW YOUR CURIOSITY</div><h2>Your next “I made that.”</h2></div><a href="#explore" class="text-button">View all courses ${icon('arrow')}</a></div><div class="catalog-toolbar">${categoryTabs()}<span class="results-label" style="margin:0">Big ideas start with one lesson.</span></div><div class="courses-grid">${recommendations.map(course => courseCard(course)).join('')}</div></section>`;
   }
   function filteredCourses(favoritesOnly = false) {
     const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
@@ -164,7 +207,9 @@
   function render() {
     updateShell();
     main.innerHTML = ({ overview, explore: () => catalog(), favorites: () => catalog(true), learning, profile, ...workspace.pages })[route]();
-    if (route === 'overview') $('.overview-middle', main).insertAdjacentHTML('beforebegin', workspace.overview());
+    if (route === 'overview') $('.overview-middle', main).insertAdjacentHTML('afterend', workspace.overview());
+    if (route === 'profile') $('.page-heading', main).insertAdjacentHTML('afterend', `<section class="panel appearance-settings"><div class="appearance-settings-copy"><span class="appearance-settings-icon">${icon('sun')}</span><div><h2>Appearance</h2><p>Your workspace, your way. <span data-appearance-summary></span></p></div></div><button class="button button-light" data-action="preferences">Preferences ${icon('chevron')}</button></section>`);
+    syncAppearance();
     if (route === 'explore' && query.trim()) $('.page-heading', main).insertAdjacentHTML('afterend', workspace.searchResults(query));
   }
   function setNavigation(open) {
@@ -234,6 +279,8 @@
     const control = event.target.closest('[data-action]'); if (!control) return;
     const { action, id } = control.dataset;
     switch (action) {
+      case 'theme-toggle': setAppearance(appearance.theme === 'dark' ? 'light' : 'dark'); break;
+      case 'preferences': appearanceDialog(); break;
       case 'category': category = control.dataset.category; render(); restoreFocus(action, null, category); break;
       case 'learning-tab': learningTab = control.dataset.tab; render(); restoreFocus(action, null, learningTab); break;
       case 'reset-filters': category = 'All courses'; level = 'All levels'; query = ''; sort = 'recommended'; $('#global-search').value = ''; render(); $('#global-search').focus(); break;
@@ -278,6 +325,7 @@
     }
   });
   document.addEventListener('change', event => {
+    if (event.target.matches('input[name="appearance"]')) setAppearance(event.target.value);
     if (event.target.id === 'level-filter') { level = event.target.value; render(); $('#level-filter').focus(); }
     if (event.target.id === 'sort-filter') { sort = event.target.value; render(); $('#sort-filter').focus(); }
   });
