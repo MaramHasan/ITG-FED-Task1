@@ -109,10 +109,12 @@ const server = http.createServer((req, res) => {
     await page.goBack();
     await page.waitForSelector('#profile-form');
 
+    await require('./verify-workspace.cjs')({ page, address, context });
+
     // Every page stays within the viewport at common desktop, tablet, and phone widths.
     for (const width of [1440, 1024, 768, 700, 390, 320]) {
       await page.setViewportSize({ width, height: 900 });
-      for (const route of ['overview', 'explore', 'learning', 'favorites', 'profile']) {
+      for (const route of ['overview', 'explore', 'learning', 'favorites', 'profile', 'paths', 'planner', 'notebook', 'insights']) {
         await page.goto(`${address}/#${route}`);
         await page.waitForSelector('h1');
         const dimensions = await page.evaluate(() => ({ content: document.documentElement.scrollWidth, viewport: innerWidth }));
@@ -155,7 +157,7 @@ const server = http.createServer((req, res) => {
     assert.match(await restricted.locator('#toast').textContent(), /storage is unavailable/);
     await ephemeral.close();
     assert.deepEqual(errors, []);
-    console.log('PASS: global search, filters, sorting, favorites, enrollment, lessons, downloads, persistence, profile escaping, goals, browser history, keyboard dialogs, mobile navigation, storage recovery, and five-page layouts at six viewport widths.');
+    console.log('PASS: global search, filters, sorting, favorites, enrollment, lessons, downloads, persistence, profile escaping, goals, browser history, keyboard dialogs, mobile navigation, storage recovery, and nine-page layouts at six viewport widths.');
   } finally {
     if (browser) await browser.close();
     await new Promise(resolve => server.close(resolve));

@@ -17,6 +17,11 @@ The root entry point is a small redirect so the implementation stays isolated. B
 - Enrollment, lesson completion, progress indicators, weekly goals, learning updates, and downloadable personal completion records.
 - Editable profile and local persistence with input validation, stored-data validation, cross-tab updates, and feedback when browser storage is unavailable.
 - Semantic elements, keyboard access, native modal focus management, mobile focus containment, reduced-motion support, and responsive layouts.
+- Three learning paths with course roadmaps, enrollment, and progress shared with My Learning.
+- A weekly study planner with editable sessions, day/status filters, overlap validation, completion tracking, undo, and `.ics` calendar export.
+- A searchable notebook with pinned notes, course and lesson links, editing, deletion recovery, and Markdown export. Notes can be written directly from a lesson.
+- Progress insights with 7/28-day activity charts, accessible data tables, study time, streaks, skill distribution, milestones, and CSV export.
+- Header search across courses, learning paths, notes, and planned study sessions.
 
 ## Files
 
@@ -26,8 +31,11 @@ The root entry point is a small redirect so the implementation stays isolated. B
 | `styles.css` | Design tokens, components, responsive and accessibility styles |
 | `courses.js` | Independent catalog and reading lesson content |
 | `app.js` | Routing, rendering, state, storage, interaction handling |
+| `workspace.js` | Paths, planner, notebook, insights, and their independent storage |
+| `workspace.css` | Workspace components, charts, calendars, and responsive layouts |
 | `assets/brand.svg` | Local vector brand mark |
 | `verify.cjs` | Browser verification; see below |
+| `verify-workspace.cjs` | Connected workspace behavior checks invoked by `verify.cjs` |
 
 ## Demo data and persistence
 
@@ -35,13 +43,19 @@ The first visit uses a fictional Alex Morgan profile, two enrolled courses with 
 
 Changes are stored under `mycourses.learning-studio.v1` in local storage. They remain local to the browser and origin, without authentication or a server. Moving between `file://` and a server gives you a separate storage context. Browsers that restrict storage still allow in-memory use, with a warning when changes cannot persist. Clear this one storage key in browser developer tools to reset the demo.
 
+The planner, notebook, and joined learning paths use a separate key, `mycourses.workspace.v1`. Existing profiles and course progress are preserved when upgrading. The workspace starts with no invented sessions or notes; create your own from the planner or a lesson. Clear both keys to reset the complete demo.
+
+Session dates use the device's local timezone. Calendar exports use UTC timestamps, support non-ASCII content and escaped text, and contain only planned sessions in the visible week. Session completion is recorded manually and does not complete course lessons. Insights distinguish all-time lesson progress (including demo starting progress) from dated activity; study minutes are the durations of sessions you mark complete. The streak counts consecutive days with a lesson completion or a recorded completed session, and remains current when the latest activity was yesterday. These are personal learning records, not automated attendance measurements.
+
+Notes are plain text and are saved with the explicit Save note button. Pinned notes sort first. Exports include all notes, regardless of the current filter. Deleting a note or session provides an Undo action in the confirmation toast. The UI synchronizes saved data across tabs on the same origin.
+
 Completion records are plain text personal records, not accredited certificates. Lesson duration estimates include independent practice; there is no video player or external lesson hosting. A production deployment would need authentication, server persistence, real course content and enrollment services, and appropriate privacy controls.
 
 The interface uses local SVG/CSS artwork. Google Fonts is an optional enhancement; system sans-serif fallbacks keep the app functional without network access.
 
 ## Browser verification
 
-`verify.cjs` runs a small local static server and checks navigation, search, filters, favorites, lesson completion, profile persistence, downloads, dialogs, mobile navigation, and layout overflow using Playwright. It requires Playwright in the invoking environment and a Chromium-compatible browser. No test dependency is installed in the original project.
+`verify.cjs` runs a small local static server and checks navigation, global search, filters, favorites, lesson completion, profile persistence, downloads, dialogs, mobile navigation, and all nine page layouts at six viewport widths using Playwright. It also invokes `verify-workspace.cjs` to check path enrollment, notes, planner conflicts, calendar export, undo, cross-tab updates, and derived insights. It requires Playwright in the invoking environment and a Chromium-compatible browser. No test dependency is installed in the original project.
 
 ```powershell
 # If Playwright is already available:

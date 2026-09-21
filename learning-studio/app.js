@@ -7,6 +7,12 @@
   const $ = (selector, root = document) => root.querySelector(selector);
   const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
   const icons = {
+    route: '<circle cx="6" cy="5" r="2"/><circle cx="18" cy="19" r="2"/><path d="M8 5h8a4 4 0 0 1 0 8H8a3 3 0 0 0 0 6h8"/>',
+    note: '<path d="M14 3H5v18h14V8Zm0 0v5h5M8 12h8M8 16h5"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    edit: '<path d="m15 4 5 5M4 20l5-1L21 7l-5-5L4 14Z"/>',
+    trash: '<path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/>',
+    pin: '<path d="m9 3 6 0-1 6 4 4v2H6v-2l4-4ZM12 15v7"/>',
     grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
     compass: '<circle cx="12" cy="12" r="9"/><path d="m16 8-2.5 5.5L8 16l2.5-5.5Z"/>',
     book: '<path d="M12 5v16M3 3c4 0 7 1 9 3 2-2 5-3 9-3v15c-4 0-7 1-9 3-2-2-5-3-9-3Z"/>',
@@ -71,7 +77,7 @@
   let dialogOpener = null;
   const main = $('#main');
   const dialog = $('#app-dialog');
-  const pageNames = { overview: 'Overview', explore: 'Explore courses', learning: 'My learning', favorites: 'Favorites', profile: 'My profile' };
+  const pageNames = { overview: 'Overview', explore: 'Explore courses', learning: 'My learning', favorites: 'Favorites', profile: 'My profile', ...window.STUDIO_WORKSPACE_PAGES };
   const initials = name => name.trim().split(/\s+/).slice(0, 2).map(part => part.charAt(0)).join('').toUpperCase() || 'L';
   const completed = course => state.enrollments[course.id]?.completed.length || 0;
   const progress = course => Math.round(completed(course) / course.topics.length * 100);
@@ -155,7 +161,12 @@
   function profile() {
     return `${heading('A space that’s yours.', 'Your details, your goals, your story in the making.')}<div class="profile-grid"><aside class="panel profile-summary"><span class="avatar">${escape(initials(state.profile.name))}</span><h2>${escape(state.profile.name)}</h2><p>${escape(state.profile.role)}</p><div class="profile-stats"><div><strong>${enrolled().length}</strong><span>Courses</span></div><div><strong>${finished().length}</strong><span>Completed</span></div></div><p class="local-note">This is your demo learning space. Profile and progress are saved in this browser.</p></aside><div><section class="panel"><div class="form-heading"><h2>Personal information</h2><p>A little introduction to the person behind the progress.</p></div><form id="profile-form"><div class="form-grid"><label class="field">Full name<input name="name" autocomplete="name" required maxlength="60" value="${escape(state.profile.name)}"></label><label class="field">Email address<input name="email" type="email" autocomplete="email" required maxlength="100" value="${escape(state.profile.email)}"></label><label class="field full">Your headline<input name="role" maxlength="100" placeholder="e.g. Curious designer, future developer" value="${escape(state.profile.role)}"></label><label class="field full">A little about you<textarea name="bio" maxlength="500">${escape(state.profile.bio)}</textarea><small>What are you curious about? What would you love to build?</small></label><label class="field full">Weekly learning goal<select name="goal">${[3, 5, 7, 10].map(value => `<option value="${value}"${value === state.profile.goal ? ' selected' : ''}>${value} lessons per week${value === 5 ? ' · A steady pace' : ''}</option>`).join('')}</select></label></div><div class="form-footer"><p>Saved on this device. No public profile.</p><button class="button button-primary" type="submit">Save changes ${icon('check')}</button></div></form></section><section class="panel profile-achievements"><h2>Your milestones</h2>${finished().length ? finished().map(course => `<div class="achievement"><span class="achievement-icon">${icon('award')}</span><div><h3>${course.title}</h3><p>All ${course.topics.length} lessons completed</p><button class="text-button" data-action="certificate" data-id="${course.id}">View completion record ${icon('arrow')}</button></div></div>`).join('') : `<div class="achievement"><span class="achievement-icon">${icon('sparkles')}</span><div><h3>The first step is already yours.</h3><p>Finish your first course to earn a completion record.</p></div></div>`}</section></div></div>`;
   }
-  function render() { updateShell(); main.innerHTML = ({ overview, explore: () => catalog(), favorites: () => catalog(true), learning, profile })[route](); }
+  function render() {
+    updateShell();
+    main.innerHTML = ({ overview, explore: () => catalog(), favorites: () => catalog(true), learning, profile, ...workspace.pages })[route]();
+    if (route === 'overview') $('.overview-middle', main).insertAdjacentHTML('beforebegin', workspace.overview());
+    if (route === 'explore' && query.trim()) $('.page-heading', main).insertAdjacentHTML('afterend', workspace.searchResults(query));
+  }
   function setNavigation(open) {
     document.body.classList.toggle('nav-open', open);
     $('.sidebar-overlay').hidden = !open;
@@ -177,6 +188,8 @@
   function openDialog(content) {
     if (!dialog.open) dialogOpener = document.activeElement;
     $('#dialog-content').innerHTML = content;
+    const lessonContent = $('.lesson-content', dialog);
+    if (lessonContent) lessonContent.insertAdjacentHTML('beforeend', workspace.lessonTools(dialogCourse, lessonIndex));
     if (!dialog.open) dialog.showModal();
     $('.dialog-header .icon-button', dialog)?.focus();
   }
@@ -207,7 +220,7 @@
     openDialog(`${dialogHeader('Look how far you’ve come.', 'A MOMENT WORTH CELEBRATING')}<div class="dialog-body"><div class="page-banner"><div><div class="eyebrow">COMPLETION RECORD</div><h2>${escape(state.profile.name)}</h2><p>Completed all reading lessons in</p><h3>${course.title}</h3></div><span class="banner-symbol" aria-hidden="true">✦</span></div><p>All ${course.topics.length} lessons completed. This personal demo record acknowledges your progress; it is not an accredited certification.</p><div class="dialog-actions"><button class="button button-primary" data-action="download" data-id="${id}">${icon('download')}Download record</button><button class="button button-light" data-action="resume" data-id="${id}">Review course</button></div></div>`);
   }
   function goalDialog() { openDialog(`${dialogHeader('Make a little room to grow.', 'YOUR WEEKLY GOAL')}<div class="dialog-body"><p>A realistic goal is a great place to start. Every lesson you finish counts toward this week’s progress, Monday through Sunday.</p><form id="goal-form"><label class="field">How many lessons per week?<select name="goal">${[3, 5, 7, 10].map(value => `<option value="${value}"${value === state.profile.goal ? ' selected' : ''}>${value} lessons · ${({ 3: 'A gentle start', 5: 'A steady pace', 7: 'One a day', 10: 'An ambitious week' })[value]}</option>`).join('')}</select></label><div class="form-footer"><p>You can change this anytime.</p><button type="submit" class="button button-primary">Save my goal ${icon('check')}</button></div></form></div>`); }
-  function helpDialog() { openDialog(`${dialogHeader('Welcome to your learning space.', 'A QUICK TOUR')}<div class="dialog-body"><div class="help-list"><section><h3>1. Follow your curiosity</h3><p>Explore the catalog or use the header search to find a topic, instructor, or skill. Press Ctrl K (⌘ K on Mac) to jump to search from any page.</p></section><section><h3>2. Make it your own</h3><p>Save interesting courses with the heart button. Open a course to see its roadmap, then choose Start learning to enroll.</p></section><section><h3>3. Turn reading into practice</h3><p>Each lesson includes a short explanation, a code example, and a practice prompt. Try the exercise in your own editor, then mark the lesson complete.</p></section><section><h3>4. See yourself grow</h3><p>My learning tracks your progress. Complete a course to download a personal completion record. Set a weekly goal and edit your details in My profile.</p></section><section><h3>About this demo</h3><p>The sample profile, ratings, initial favorites, and initial course progress are demonstration data. Changes stay in this browser using local storage; there is no server, sign-in, or cross-device synchronization. The original project runs separately.</p></section></div></div>`); }
+  function helpDialog() { openDialog(`${dialogHeader('Welcome to your learning space.', 'A QUICK TOUR')}<div class="dialog-body"><div class="help-list"><section><h3>1. Follow your curiosity</h3><p>Explore the catalog or use the header search to find a topic, instructor, or skill. Press Ctrl K (⌘ K on Mac) to jump to search from any page.</p></section><section><h3>2. Make it your own</h3><p>Save interesting courses with the heart button. Open a course to see its roadmap, then choose Start learning to enroll.</p></section><section><h3>3. Turn reading into practice</h3><p>Each lesson includes a short explanation, a code example, and a practice prompt. Try the exercise in your own editor, then mark the lesson complete.</p></section><section><h3>4. See yourself grow</h3><p>My learning tracks your progress. Complete a course to download a personal completion record. Set a weekly goal and edit your details in My profile.</p></section><section><h3>About this demo</h3><p>The sample profile, ratings, initial favorites, and initial course progress are demonstration data. Changes stay in this browser using local storage; there is no server, sign-in, or cross-device synchronization. Use Learning paths to follow a course sequence, Study planner to make time for practice, My notebook to save ideas, and Progress insights to see your activity.</p></section></div></div>`); }
   function notifications() {
     $('.notification-dot').hidden = true;
     openDialog(`${dialogHeader('Your learning updates', 'LITTLE WINS, BIG POSSIBILITIES')}<div class="dialog-body"><div class="update-item">${icon('target')}<div><h3>${weekActivity().length >= state.profile.goal ? 'Your weekly goal is complete!' : 'Your weekly goal is ready'}</h3><p>${weekActivity().length} of ${state.profile.goal} lessons completed this week.</p><button class="text-button" data-action="goal">Adjust your goal ${icon('arrow')}</button></div></div>${finished().map(course => `<div class="update-item">${icon('award')}<div><h3>You completed ${course.title}</h3><p>Your completion record is ready.</p><button class="text-button" data-action="certificate" data-id="${course.id}">View record ${icon('arrow')}</button></div></div>`).join('')}<div class="update-item">${icon('sparkles')}<div><h3>Your next chapter is here</h3><p>Explore ${courses.length} courses across frontend, backend, and databases. Your progress will be waiting when you return.</p></div></div></div>`);
@@ -315,5 +328,14 @@
   window.addEventListener('hashchange', navigate);
   window.addEventListener('storage', event => { if (event.key === storageKey || event.key === null) { state = loadState(); render(); if (dialog.open) dialog.close(); } });
   matchMedia('(max-width: 700px)').addEventListener('change', () => setNavigation(false));
+  const workspace = window.createStudioWorkspace({
+    courses, icon, escape, heading, empty, localDate, progress, completed,
+    getState: () => state, getRoute: () => route, render, toast,
+    openDialog, dialogHeader, openLesson, openDetails, resume,
+    enrollCourses(ids) {
+      ids.forEach(id => { if (courses.some(course => course.id === id) && !state.enrollments[id]) state.enrollments[id] = { completed: [] }; });
+      persist(); render(); saveMessage('Your learning path is ready in My learning.');
+    }
+  });
   navigate();
 })();
