@@ -1,12 +1,12 @@
 # MyCourses · Learning Studio
 
-A standalone redesign of the course dashboard. **Every implementation file is new and lives in this directory.** The original `index.html`, `style.css`, `js/`, `data/`, and assets are untouched. There are no package dependencies, generated build files, or changes to shared configuration.
+A standalone redesign of the course dashboard. **The redesign implementation lives in this directory.** The root `index.html` now opens this dashboard by default, preserving URL query parameters and page hashes. The original `style.css`, `js/`, `data/`, and assets remain untouched. There are no package dependencies, generated build files, or changes to shared configuration.
 
 ## Open it
 
-Open `learning-studio/index.html` directly in a modern browser, or use your existing static development server and visit `/learning-studio/`. For example, open this folder with VS Code Live Server. No installation or build is required.
+Open the root `index.html` directly in a modern browser, or use your existing static development server and visit the project root. It automatically opens `learning-studio/index.html`. You can also visit `/learning-studio/` directly. No installation or build is required.
 
-The original project is still available at `/index.html`. This redesign intentionally has its own entry point; replacing the original entry point would violate the new-files-only requirement.
+The root entry point is a small redirect so the implementation stays isolated. Both static hosting under a subdirectory and direct file opening are supported. The previous root page remains available in Git history.
 
 ## Included
 
