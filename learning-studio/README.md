@@ -62,6 +62,10 @@ The interface uses local SVG/CSS artwork. Google Fonts is an optional enhancemen
 
 ## Browser verification
 
+Explore and Favorites use six courses per page, with 6 / 12 / 24 page-size buttons, a bounded page-number range, and a direct page jump for more than seven pages. Mobile uses Previous / Next and the current page count. Category shortcuts come from the catalog; Browse categories opens a searchable dialog with course counts. Filters, search, sorting, page size, and page are stored in the hash URL for refresh, sharing, and browser history. Changing filters or page size starts at page one. This static demo filters the complete catalog locally; a production catalog should fetch filtered pages and totals from its API.
+
+`verify-catalog.cjs` is included in the browser verification and uses a temporary browser-only fixture of 249 courses across 43 categories to check pagination, category search, URL recovery, keyboard focus, and responsive layouts. The shipped catalog remains unchanged.
+
 `verify.cjs` runs a small local static server and checks navigation, global search, filters, favorites, lesson completion, profile persistence, downloads, dialogs, mobile navigation, and all nine page layouts at six viewport widths using Playwright. It also invokes `verify-workspace.cjs` to check path enrollment, notes, planner conflicts, calendar export, undo, cross-tab updates, and derived insights. It requires Playwright in the invoking environment and a Chromium-compatible browser. No test dependency is installed in the original project.
 
 ```powershell
@@ -70,3 +74,5 @@ node learning-studio/verify.cjs
 ```
 
 Optionally set `STUDIO_BROWSER_PATH` to the browser executable and `STUDIO_PLAYWRIGHT_PATH` to an absolute Playwright module path. Set `STUDIO_SCREENSHOT_DIR` to an existing directory to capture desktop and mobile screenshots during verification.
+
+Set `STUDIO_CATALOG_ONLY=1` to run only the category and pagination checks.

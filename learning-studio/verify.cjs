@@ -24,6 +24,10 @@ const server = http.createServer((req, res) => {
   try {
     const defaultBrowser = process.platform === 'win32' ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' : undefined;
     browser = await chromium.launch({ headless: true, executablePath: process.env.STUDIO_BROWSER_PATH || defaultBrowser });
+    if (process.env.STUDIO_CATALOG_ONLY === '1') {
+      await require('./verify-catalog.cjs')({ browser, address });
+      return;
+    }
     const context = await browser.newContext({ viewport: { width: 1440, height: 1100 }, reducedMotion: 'reduce' });
     // Verify that the application works without any external font or CDN request.
     await context.route('https://**/*', route => route.abort());
@@ -44,7 +48,7 @@ const server = http.createServer((req, res) => {
     await search.fill('a-topic-that-does-not-exist');
     assert.equal(await page.locator('.empty-state h2').textContent(), 'No courses found');
     await page.locator('[data-action="reset-filters"]').click();
-    assert.equal(await page.locator('.course-card').count(), 9);
+    assert.equal(await page.locator('.course-card').count(), 6);
     await page.locator('[data-category="Database"]').click();
     assert.equal(await page.locator('.course-card').count(), 2);
     await page.selectOption('#level-filter', 'Intermediate');
@@ -111,6 +115,7 @@ const server = http.createServer((req, res) => {
 
     await require('./verify-workspace.cjs')({ page, address, context });
     await require('./verify-appearance.cjs')({ browser, address });
+    await require('./verify-catalog.cjs')({ browser, address });
 
     // Every page stays within the viewport at common desktop, tablet, and phone widths.
     for (const width of [1440, 1024, 768, 700, 390, 320]) {

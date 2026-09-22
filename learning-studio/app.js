@@ -74,6 +74,8 @@
   let sort = 'recommended';
   let learningTab = 'in-progress';
   let query = '';
+  let catalogPage = 1;
+  let pageSize = 6;
   let toastTimer;
   let dialogCourse = null;
   let lessonIndex = 0;
@@ -173,7 +175,62 @@
     const count = weekActivity().length;
     return `<aside class="weekly-card"><div class="section-heading"><h3>Your weekly goal</h3><button class="icon-button" data-action="goal" aria-label="Edit weekly goal">${icon('target')}</button></div><p>Small steps. Real progress.</p><div class="goal-value"><strong>${count}</strong><span>/ ${state.profile.goal} lessons this week</span></div><div class="progress" role="progressbar" aria-label="Weekly learning goal" aria-valuenow="${Math.min(count, state.profile.goal)}" aria-valuemin="0" aria-valuemax="${state.profile.goal}"><span style="width:${Math.min(count / state.profile.goal * 100, 100)}%"></span></div><div class="week-days">${weekDates().map((date, index) => { const done = state.activity.some(item => item.date === date); return `<span class="week-day"><span>${['M', 'T', 'W', 'T', 'F', 'S', 'S'][index]}</span><span class="day-dot ${done ? 'done' : ''} ${date === localDate() ? 'today' : ''}" aria-label="${date}${done ? ': lesson completed' : ''}${date === localDate() ? ': today' : ''}">${done ? icon('check') : ''}</span></span>`; }).join('')}</div><div class="goal-note">${count >= state.profile.goal ? 'Goal reached. Look at you grow!' : 'Your next lesson is a step forward.'}</div></aside>`;
   }
-  function categoryTabs() { return `<div class="category-tabs" role="group" aria-label="Course category">${['All courses', 'Frontend', 'Backend', 'Database'].map(name => `<button class="category-tab ${category === name ? 'active' : ''}" data-action="category" data-category="${name}" aria-pressed="${category === name}">${name}</button>`).join('')}</div>`; }
+  function categoryCounts() {
+    const counts = new Map();
+    for (const course of courses) {
+      if (route === 'favorites' && !state.favorites.includes(course.id)) continue;
+      counts.set(course.category, (counts.get(course.category) || 0) + 1);
+    }
+    return counts;
+  }
+  function categoryTabs() {
+    const counts = categoryCounts();
+    const shortcuts = [...counts.keys()].slice(0, 3);
+    if (category !== 'All courses' && !shortcuts.includes(category)) shortcuts.splice(2, 1, category);
+    return `<div class="category-browser"><div class="category-tabs" role="group" aria-label="Course category">${['All courses', ...shortcuts].map(name => `<button class="category-tab ${category === name ? 'active' : ''}" data-action="category" data-category="${escape(name)}" aria-pressed="${category === name}"><span>${escape(name)}</span><span class="category-count">${name === 'All courses' ? [...counts.values()].reduce((sum, count) => sum + count, 0) : counts.get(name) || 0}</span></button>`).join('')}</div><button class="browse-categories" data-action="browse-categories" aria-haspopup="dialog">${icon('grid')}<span>Browse categories</span>${icon('chevron')}</button></div>`;
+  }
+  function categoryChoices(term = '') {
+    const counts = categoryCounts();
+    const names = ['All courses', ...[...counts.keys()].sort((a, b) => a.localeCompare(b))].filter(name => name.toLowerCase().includes(term.trim().toLowerCase()));
+    return { count: names.length, html: names.length ? names.map(name => `<button class="category-choice" data-action="category" data-category="${escape(name)}" aria-pressed="${category === name}"><span><strong>${escape(name)}</strong><small>${name === 'All courses' ? [...counts.values()].reduce((sum, count) => sum + count, 0) : counts.get(name)} courses</small></span>${icon(category === name ? 'check' : 'chevron')}</button>`).join('') : '<p class="category-no-results">No matching categories. Try another name.</p>' };
+  }
+  function browseCategories() {
+    const choices = categoryChoices();
+    openDialog(`${dialogHeader('Find your next interest.', 'BROWSE CATEGORIES')}<div class="dialog-body"><p>Choose a category to explore its courses.</p><label class="category-search" for="category-search">${icon('search')}<span class="sr-only">Search categories</span><input id="category-search" type="search" placeholder="Search categories…" autocomplete="off" aria-controls="category-choices"></label><p class="sr-only" id="category-search-status" role="status">${choices.count} categories</p><div class="category-choices" id="category-choices">${choices.html}</div></div>`);
+    $('#category-search').focus();
+  }
+  function syncCatalogUrl(replace = false) {
+    if (!['explore', 'favorites'].includes(route)) return;
+    const params = new URLSearchParams();
+    if (category !== 'All courses') params.set('category', category);
+    if (level !== 'All levels') params.set('level', level);
+    if (sort !== 'recommended') params.set('sort', sort);
+    if (query) params.set('q', query);
+    if (catalogPage > 1) params.set('page', catalogPage);
+    if (pageSize !== 6) params.set('size', pageSize);
+    const hash = `#${route}${params.size ? `?${params}` : ''}`;
+    if (location.hash !== hash) history[replace ? 'replaceState' : 'pushState'](null, '', hash);
+  }
+  function changeCatalog(focusSelector, resetPage = true) {
+    if (resetPage) catalogPage = 1;
+    syncCatalogUrl();
+    render();
+    if (focusSelector) $(focusSelector)?.focus({ preventScroll: true });
+  }
+  function pagination(total) {
+    if (!total) return '';
+    const pages = Math.ceil(total / pageSize);
+    const visible = new Set([1, pages]);
+    const start = Math.max(1, Math.min(catalogPage - 1, pages - 4));
+    for (let page = start; page <= Math.min(pages, start + 4); page++) visible.add(page);
+    let previous = 0;
+    const numbers = [...visible].sort((a, b) => a - b).map(page => {
+      const gap = page - previous > 1 ? '<span class="pagination-gap" aria-hidden="true">…</span>' : '';
+      previous = page;
+      return `${gap}<button data-action="catalog-page" data-page="${page}" aria-label="Page ${page}"${page === catalogPage ? ' aria-current="page"' : ''}>${page}</button>`;
+    }).join('');
+    return `<div class="catalog-pagination"><div class="page-size" role="group" aria-label="Courses per page"><span>Per page</span>${[6, 12, 24].map(size => `<button data-action="page-size" data-size="${size}" aria-pressed="${size === pageSize}">${size}</button>`).join('')}</div>${pages > 1 ? `<nav class="pagination" aria-label="Course pages"><button class="page-direction page-previous" data-action="catalog-page" data-page="${catalogPage - 1}" aria-label="Previous page"${catalogPage === 1 ? ' disabled' : ''}>${icon('chevron')}<span>Previous</span></button><div class="page-numbers">${numbers}</div><span class="mobile-page-position">${catalogPage} / ${pages}</span><button class="page-direction" data-action="catalog-page" data-page="${catalogPage + 1}" aria-label="Next page"${catalogPage === pages ? ' disabled' : ''}><span>Next</span>${icon('chevron')}</button></nav>` : ''}${pages > 7 ? `<form id="page-jump" class="page-jump"><label for="page-number">Go to page</label><input id="page-number" name="page" type="number" min="1" max="${pages}" required inputmode="numeric"><button type="submit">Go</button></form>` : ''}</div>`;
+  }
   function overview() {
     const active = enrolled().filter(course => progress(course) < 100).slice(0, 2);
     const recommendations = courses.filter(course => category === 'All courses' || course.category === category).slice(0, 3);
@@ -194,8 +251,12 @@
   }
   function catalog(favoritesOnly = false) {
     const list = filteredCourses(favoritesOnly);
+    catalogPage = Math.max(1, Math.min(catalogPage, Math.ceil(list.length / pageSize) || 1));
+    syncCatalogUrl(true);
+    const offset = (catalogPage - 1) * pageSize;
+    const summary = list.length ? `Showing ${offset + 1}–${Math.min(offset + pageSize, list.length)} of ${list.length} ${list.length === 1 ? 'course' : 'courses'}` : '0 courses';
     const reset = `<button class="button button-primary" data-action="reset-filters">Clear filters ${icon('arrow')}</button>`;
-    return `${heading(favoritesOnly ? 'Saved for a curious day.' : query ? `Results for “${escape(query)}”` : 'What will you learn next?', favoritesOnly ? 'A collection of possibilities, picked by you.' : 'Build real skills. Follow your curiosity. Make your next move.')}<div class="catalog-toolbar">${categoryTabs()}<div class="toolbar-controls"><label class="sr-only" for="level-filter">Course level</label><select id="level-filter">${['All levels', 'Beginner', 'Intermediate', 'Advanced'].map(value => `<option${level === value ? ' selected' : ''}>${value}</option>`).join('')}</select><label class="sr-only" for="sort-filter">Sort courses</label><select id="sort-filter">${[['recommended', 'Recommended'], ['rating', 'Highest rated'], ['duration', 'Shortest first'], ['title', 'Title: A to Z']].map(([value, label]) => `<option value="${value}"${sort === value ? ' selected' : ''}>${label}</option>`).join('')}</select></div></div><p class="results-label" role="status">${list.length} ${list.length === 1 ? 'course' : 'courses'} ${favoritesOnly ? 'in your collection' : 'to explore'}${query ? ` · matching “${escape(query)}”` : ''}</p><div class="courses-grid">${list.length ? list.map(course => courseCard(course)).join('') : favoritesOnly && !state.favorites.length ? empty('Keep a little inspiration here', 'Tap the heart on any course to add it to your personal collection.', undefined, 'heart') : empty('No courses found', 'Try a different topic, instructor, category, or level.', reset, 'search')}</div>`;
+    return `${heading(favoritesOnly ? 'Saved for a curious day.' : query ? `Results for “${escape(query)}”` : 'What will you learn next?', favoritesOnly ? 'A collection of possibilities, picked by you.' : 'Build real skills. Follow your curiosity. Make your next move.')}<div class="catalog-toolbar">${categoryTabs()}<div class="toolbar-controls"><label class="sr-only" for="level-filter">Course level</label><select id="level-filter">${['All levels', 'Beginner', 'Intermediate', 'Advanced'].map(value => `<option${level === value ? ' selected' : ''}>${value}</option>`).join('')}</select><label class="sr-only" for="sort-filter">Sort courses</label><select id="sort-filter">${[['recommended', 'Recommended'], ['rating', 'Highest rated'], ['duration', 'Shortest first'], ['title', 'Title: A to Z']].map(([value, label]) => `<option value="${value}"${sort === value ? ' selected' : ''}>${label}</option>`).join('')}</select></div></div><div class="catalog-results-heading" id="catalog-results" tabindex="-1"><p class="results-label">${summary} ${favoritesOnly ? 'in your collection' : 'to explore'}${query ? ` · matching “${escape(query)}”` : ''}</p>${list.length && (category !== 'All courses' || level !== 'All levels' || query) ? '<button class="text-button" data-action="reset-filters">Clear filters</button>' : ''}</div><div class="courses-grid">${list.length ? list.slice(offset, offset + pageSize).map(course => courseCard(course)).join('') : favoritesOnly && !state.favorites.length ? empty('Keep a little inspiration here', 'Tap the heart on any course to add it to your personal collection.', undefined, 'heart') : empty('No courses found', 'Try a different topic, instructor, category, or level.', reset, 'search')}</div>${pagination(list.length)}`;
   }
   function learning() {
     const list = enrolled().filter(course => learningTab === 'all' || (learningTab === 'completed' ? progress(course) === 100 : progress(course) < 100));
@@ -210,6 +271,7 @@
     if (route === 'overview') $('.overview-middle', main).insertAdjacentHTML('afterend', workspace.overview());
     if (route === 'profile') $('.page-heading', main).insertAdjacentHTML('afterend', `<section class="panel appearance-settings"><div class="appearance-settings-copy"><span class="appearance-settings-icon">${icon('sun')}</span><div><h2>Appearance</h2><p>Your workspace, your way. <span data-appearance-summary></span></p></div></div><button class="button button-light" data-action="preferences">Preferences ${icon('chevron')}</button></section>`);
     syncAppearance();
+    if (['explore', 'favorites'].includes(route)) $('#catalog-status').textContent = `${$('.results-label', main).textContent}. Page ${catalogPage} of ${Math.max(1, Math.ceil(filteredCourses(route === 'favorites').length / pageSize))}.`;
     if (route === 'explore' && query.trim()) $('.page-heading', main).insertAdjacentHTML('afterend', workspace.searchResults(query));
   }
   function setNavigation(open) {
@@ -225,7 +287,18 @@
     const requested = location.hash.slice(1).split('?')[0];
     route = Object.hasOwn(pageNames, requested) ? requested : 'overview';
     category = 'All courses'; level = 'All levels'; sort = 'recommended';
-    if (route !== 'explore') { query = ''; $('#global-search').value = ''; }
+    query = ''; catalogPage = 1; pageSize = 6;
+    if (['explore', 'favorites'].includes(route)) {
+      const params = new URLSearchParams(location.hash.split('?').slice(1).join('?'));
+      if (courses.some(course => course.category === params.get('category'))) category = params.get('category');
+      if (['Beginner', 'Intermediate', 'Advanced'].includes(params.get('level'))) level = params.get('level');
+      if (['title', 'duration', 'rating'].includes(params.get('sort'))) sort = params.get('sort');
+      query = params.get('q') || '';
+      const page = Number(params.get('page'));
+      if (Number.isSafeInteger(page) && page > 0) catalogPage = page;
+      if ([6, 12, 24].includes(Number(params.get('size')))) pageSize = Number(params.get('size'));
+    }
+    $('#global-search').value = query;
     setNavigation(false);
     if (dialog.open) dialog.close();
     render(); window.scrollTo(0, 0); main.focus({ preventScroll: true });
@@ -281,9 +354,24 @@
     switch (action) {
       case 'theme-toggle': setAppearance(appearance.theme === 'dark' ? 'light' : 'dark'); break;
       case 'preferences': appearanceDialog(); break;
-      case 'category': category = control.dataset.category; render(); restoreFocus(action, null, category); break;
+      case 'browse-categories': browseCategories(); break;
+      case 'category':
+        category = control.dataset.category;
+        if (dialog.open) dialog.close();
+        changeCatalog(); restoreFocus(action, null, category);
+        $('.category-tab.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+        dialogOpener = document.activeElement; break;
+      case 'catalog-page': {
+        const page = Number(control.dataset.page);
+        if (page < 1 || page > Math.ceil(filteredCourses(route === 'favorites').length / pageSize)) break;
+        catalogPage = page;
+        changeCatalog('#catalog-results', false);
+        $('#catalog-results').scrollIntoView({ block: 'start', behavior: 'instant' });
+        break;
+      }
+      case 'page-size': pageSize = Number(control.dataset.size); changeCatalog(`[data-action="page-size"][data-size="${pageSize}"]`); break;
       case 'learning-tab': learningTab = control.dataset.tab; render(); restoreFocus(action, null, learningTab); break;
-      case 'reset-filters': category = 'All courses'; level = 'All levels'; query = ''; sort = 'recommended'; $('#global-search').value = ''; render(); $('#global-search').focus(); break;
+      case 'reset-filters': category = 'All courses'; level = 'All levels'; query = ''; sort = 'recommended'; $('#global-search').value = ''; changeCatalog('#global-search'); break;
       case 'details': openDetails(id); break;
       case 'favorite': {
         if (!courses.some(course => course.id === id)) break;
@@ -326,10 +414,18 @@
   });
   document.addEventListener('change', event => {
     if (event.target.matches('input[name="appearance"]')) setAppearance(event.target.value);
-    if (event.target.id === 'level-filter') { level = event.target.value; render(); $('#level-filter').focus(); }
-    if (event.target.id === 'sort-filter') { sort = event.target.value; render(); $('#sort-filter').focus(); }
+    if (event.target.id === 'level-filter') { level = event.target.value; changeCatalog('#level-filter'); }
+    if (event.target.id === 'sort-filter') { sort = event.target.value; changeCatalog('#sort-filter'); }
   });
   document.addEventListener('submit', event => {
+    if (event.target.id === 'page-jump') {
+      event.preventDefault();
+      const page = Number(new FormData(event.target).get('page'));
+      if (Number.isInteger(page) && page >= 1 && page <= Math.ceil(filteredCourses(route === 'favorites').length / pageSize)) {
+        catalogPage = page; changeCatalog('#catalog-results', false);
+        $('#catalog-results').scrollIntoView({ block: 'start', behavior: 'instant' });
+      }
+    }
     if (event.target.id === 'profile-form') {
       event.preventDefault();
       const form = event.target; const data = new FormData(form); const name = String(data.get('name')).trim();
@@ -341,17 +437,24 @@
       event.preventDefault(); state.profile.goal = Number(new FormData(event.target).get('goal')); persist(); render(); dialog.close(); saveMessage('Your new weekly goal is set. You’ve got this.');
     }
   });
-  document.addEventListener('input', event => { if (event.target.name === 'name') event.target.setCustomValidity(''); });
+  document.addEventListener('input', event => {
+    if (event.target.name === 'name') event.target.setCustomValidity('');
+    if (event.target.id === 'category-search') {
+      const choices = categoryChoices(event.target.value);
+      $('#category-choices').innerHTML = choices.html;
+      $('#category-search-status').textContent = `${choices.count} matching categories`;
+    }
+  });
   $('#search-form').addEventListener('submit', event => {
     event.preventDefault(); query = $('#global-search').value.trim(); category = 'All courses'; level = 'All levels';
-    if (route !== 'explore') location.hash = 'explore'; else { render(); main.focus(); }
+    route = 'explore'; changeCatalog('#catalog-results');
   });
   $('#global-search').addEventListener('input', event => {
     query = event.target.value; category = 'All courses'; level = 'All levels';
     if (route !== 'explore') {
       route = 'explore'; history.pushState(null, '', '#explore'); window.scrollTo(0, 0);
     }
-    render();
+    catalogPage = 1; syncCatalogUrl(true); render();
   });
   $('.menu-toggle').addEventListener('click', () => setNavigation(!document.body.classList.contains('nav-open')));
   $('.main-nav').addEventListener('click', event => {
@@ -360,6 +463,7 @@
   });
   $('.sidebar-overlay').addEventListener('click', () => { setNavigation(false); $('.menu-toggle').focus(); });
   document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && dialog.open && $('#category-search', dialog)) { event.preventDefault(); dialog.close(); }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k' && !dialog.open) { event.preventDefault(); setNavigation(false); $('#global-search').focus(); $('#global-search').select(); }
     if (event.key === 'Escape' && document.body.classList.contains('nav-open')) { setNavigation(false); $('.menu-toggle').focus(); }
     if (event.key === 'Tab' && document.body.classList.contains('nav-open')) {
