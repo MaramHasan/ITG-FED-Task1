@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#171c23">
+  <title>MyCourses · Learning Studio</title>
+  <script>
+    const dashboard = new URL('learning-studio/sign-in.html', window.location.href);
+    dashboard.search = window.location.search;
+    dashboard.hash = window.location.hash;
+    window.location.replace(dashboard.href);
+  </script>
+  <noscript><meta http-equiv="refresh" content="0; url=learning-studio/sign-in.html"></noscript>
+</head>
+<body>
+  <p>Opening your learning space… <a href="learning-studio/sign-in.html">Open MyCourses</a></p>
+</body>
+</html>
