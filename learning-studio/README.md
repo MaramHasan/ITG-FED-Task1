@@ -13,6 +13,7 @@ The root entry point is a small redirect so the implementation stays isolated. B
 - Responsive sidebar, mobile drawer, overview dashboard, and header search (Ctrl/Cmd K).
 - Header sun/moon toggle and My profile → Preferences with Light, Dark, and System appearance. System is the default, follows device changes live, and a saved choice applies before rendering.
 - Explore courses with category and level filters, sorting, global text search, course details, and useful empty states.
+- Dedicated `course-details.html?id=html` page with course overview, instructor, expandable lesson roadmap, enrollment, favorites, and saved progress. Course links share and refresh directly, with loading, retry, missing-course, and no-lessons states.
 - Favorites with saved state, dedicated My Learning and Profile pages, and browser history navigation.
 - Nine self-paced demo courses, each with five original reading lessons, code examples, and independent practice prompts.
 - Enrollment, lesson completion, progress indicators, weekly goals, learning updates, and downloadable personal completion records.
@@ -31,6 +32,10 @@ The root entry point is a small redirect so the implementation stays isolated. B
 | `index.html` | Document, application shell, navigation, global search |
 | `styles.css` | Design tokens, components, responsive and accessibility styles |
 | `courses.js` | Independent catalog and reading lesson content |
+| `course-details.html` | Details entry point using the existing application shell (also linked from the root redirect) |
+| `course-service.js` | Async local course lookup and reading-lesson normalization; no remote API calls |
+| `course-details.js` | Course Details presentation and page states |
+| `course-details.css` | Responsive course overview, roadmap, enrollment card, and dark theme |
 | `app.js` | Routing, rendering, state, storage, interaction handling |
 | `workspace.js` | Paths, planner, notebook, insights, and their independent storage |
 | `workspace.css` | Workspace components, charts, calendars, and responsive layouts |
@@ -39,10 +44,13 @@ The root entry point is a small redirect so the implementation stays isolated. B
 | `appearance.css` | Appearance picker and dark styles across the workspace |
 | `assets/brand.svg` | Local vector brand mark |
 | `verify.cjs` | Browser verification; see below |
+| `verify-course-details.cjs` | Details links, history, page states, learning actions, file opening, and responsive theme checks |
 | `verify-workspace.cjs` | Connected workspace behavior checks invoked by `verify.cjs` |
 | `verify-appearance.cjs` | Theme persistence, device changes, keyboard controls, storage fallback and dark layouts |
 
 ## Demo data and persistence
+
+Course Details continues to use `STUDIO_COURSES` and `STUDIO_LESSONS` from `courses.js`. The local service maps lesson tuples into named fields before rendering; the existing course UI model and IDs are preserved. The Education API is intentionally not connected in this UI iteration. The application controller handles loading and failures outside the renderer, so a future API adapter can replace the local service. No API response schema is assumed.
 
 The first visit uses a fictional Alex Morgan profile, two enrolled courses with sample progress, and two favorites. Ratings and instructor details are illustrative. Weekly activity starts at zero and records real completion actions in this browser. All profile inputs are escaped before rendering.
 
@@ -76,3 +84,5 @@ node learning-studio/verify.cjs
 Optionally set `STUDIO_BROWSER_PATH` to the browser executable and `STUDIO_PLAYWRIGHT_PATH` to an absolute Playwright module path. Set `STUDIO_SCREENSHOT_DIR` to an existing directory to capture desktop and mobile screenshots during verification.
 
 Set `STUDIO_CATALOG_ONLY=1` to run only the category and pagination checks.
+
+Set `STUDIO_DETAILS_ONLY=1` to run only the Course Details checks. When `STUDIO_SCREENSHOT_DIR` is set, these checks also capture desktop and mobile details pages in light and dark themes.

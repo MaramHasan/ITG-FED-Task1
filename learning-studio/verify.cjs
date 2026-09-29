@@ -28,6 +28,8 @@ const server = http.createServer((req, res) => {
       await require('./verify-catalog.cjs')({ browser, address });
       return;
     }
+    await require('./verify-course-details.cjs')({ browser, address });
+    if (process.env.STUDIO_DETAILS_ONLY === '1') return;
     const context = await browser.newContext({ viewport: { width: 1440, height: 1100 }, reducedMotion: 'reduce' });
     // Verify that the application works without any external font or CDN request.
     await context.route('https://**/*', route => route.abort());
@@ -70,7 +72,7 @@ const server = http.createServer((req, res) => {
     // Enrollment, lesson progress, completion records, persistence, and review idempotence.
     await page.locator('.main-nav [data-route="explore"]').click();
     await page.locator('.course-title[data-id="sql"]').click();
-    await page.locator('[data-action="enroll"]').click();
+    await page.locator('.details-start[data-action="enroll"]').click();
     for (let index = 0; index < 5; index++) {
       await page.locator(`[data-action="complete"][data-index="${index}"]`).click();
     }
@@ -145,8 +147,8 @@ const server = http.createServer((req, res) => {
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('.menu-toggle').evaluate(el => el === document.activeElement), true);
     await page.locator('.course-title').first().click();
-    assert.equal(await page.locator('dialog').evaluate(el => el.scrollWidth <= el.clientWidth + 1), true);
-    await page.keyboard.press('Escape');
+    await page.waitForSelector('.details-lessons');
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
 
     // Malformed saved data recovers safely; denied storage still supports interaction.
     await page.evaluate(() => localStorage.setItem('mycourses.learning-studio.v1', '{broken'));

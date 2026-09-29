@@ -82,10 +82,14 @@
   let dialogOpener = null;
   const main = $('#main');
   const dialog = $('#app-dialog');
-  const pageNames = { overview: 'Overview', explore: 'Explore courses', learning: 'My learning', favorites: 'Favorites', profile: 'My profile', ...window.STUDIO_WORKSPACE_PAGES };
+  let detailsData = { status: 'loading' };
+  let detailsRequest = 0;
+  const renderDetails = window.createCourseDetails({ icon, escape, courseArt, initials: name => initials(name), getState: () => state });
+  const isDetailsUrl = () => location.pathname.endsWith('/course-details.html');
+  const pageNames = { details: 'Course details', overview: 'Overview', explore: 'Explore courses', learning: 'My learning', favorites: 'Favorites', profile: 'My profile', ...window.STUDIO_WORKSPACE_PAGES };
   const initials = name => name.trim().split(/\s+/).slice(0, 2).map(part => part.charAt(0)).join('').toUpperCase() || 'L';
   const completed = course => state.enrollments[course.id]?.completed.length || 0;
-  const progress = course => Math.round(completed(course) / course.topics.length * 100);
+  const progress = course => course.topics.length ? Math.round(completed(course) / course.topics.length * 100) : 0;
   const enrolled = () => courses.filter(course => state.enrollments[course.id]);
   const finished = () => enrolled().filter(course => progress(course) === 100);
   function localDate(date = new Date()) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; }
@@ -137,7 +141,7 @@
     $('#favorites-count').textContent = state.favorites.length;
     $('#page-label').textContent = pageNames[route];
     document.querySelectorAll('[data-route]').forEach(link => {
-      const active = link.dataset.route === route;
+      const active = link.dataset.route === (route === 'details' ? 'explore' : route);
       link.classList.toggle('active', active);
       if (active) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
     });
@@ -161,7 +165,7 @@
   }
   function courseCard(course, learning = false) {
     const done = progress(course) === 100;
-    return `<article class="course-card ${learning ? 'learning-card' : ''}">${courseArt(course)}<div class="course-body"><div class="course-category"><span>${course.category.toUpperCase()}</span><span class="course-rating">${icon('star')} ${course.rating.toFixed(1)} <span class="sr-only">out of 5</span></span></div><h3><button class="course-title" data-action="details" data-id="${course.id}">${course.title}</button></h3><div class="instructor"><span class="instructor-avatar" aria-hidden="true">${initials(course.instructor)}</span>${course.instructor}</div>${learning ? `<div class="progress-line"><div class="progress" role="progressbar" aria-label="${course.title} progress" aria-valuenow="${progress(course)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${progress(course)}%"></span></div><span>${completed(course)} / ${course.topics.length} lessons</span></div><button class="button ${done ? 'button-soft' : 'button-primary'}" data-action="${done ? 'certificate' : 'resume'}" data-id="${course.id}">${icon(done ? 'award' : 'play')}${done ? 'View completion record' : completed(course) ? 'Continue learning' : 'Start first lesson'}</button>` : `<div class="course-meta"><span>${icon('clock')}${course.hours} hours</span><span>${icon('bars')}${course.level}</span><button class="course-link" data-action="details" data-id="${course.id}">View course ${icon('arrow')}<span class="sr-only">: ${course.title}</span></button></div>`}</div></article>`;
+    return `<article class="course-card ${learning ? 'learning-card' : ''}">${courseArt(course)}<div class="course-body"><div class="course-category"><span>${course.category.toUpperCase()}</span><span class="course-rating">${icon('star')} ${course.rating.toFixed(1)} <span class="sr-only">out of 5</span></span></div><h3><a class="course-title" href="course-details.html?id=${encodeURIComponent(course.id)}" data-action="details" data-id="${course.id}">${course.title}</a></h3><div class="instructor"><span class="instructor-avatar" aria-hidden="true">${initials(course.instructor)}</span>${course.instructor}</div>${learning ? `<div class="progress-line"><div class="progress" role="progressbar" aria-label="${course.title} progress" aria-valuenow="${progress(course)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${progress(course)}%"></span></div><span>${completed(course)} / ${course.topics.length} lessons</span></div><button class="button ${done ? 'button-soft' : 'button-primary'}" data-action="${done ? 'certificate' : 'resume'}" data-id="${course.id}">${icon(done ? 'award' : 'play')}${done ? 'View completion record' : completed(course) ? 'Continue learning' : 'Start first lesson'}</button>` : `<div class="course-meta"><span>${icon('clock')}${course.hours} hours</span><span>${icon('bars')}${course.level}</span><a class="course-link" href="course-details.html?id=${encodeURIComponent(course.id)}" data-action="details" data-id="${course.id}">View course ${icon('arrow')}<span class="sr-only">: ${course.title}</span></a></div>`}</div></article>`;
   }
   function stats() {
     const values = [ ['book', enrolled().length, 'Enrolled courses'], ['play', enrolled().filter(course => progress(course) < 100).length, 'In progress'], ['award', finished().length, 'Completed courses'], ['check', enrolled().reduce((total, course) => total + completed(course), 0), 'Lessons completed'] ];
@@ -209,7 +213,8 @@
     if (catalogPage > 1) params.set('page', catalogPage);
     if (pageSize !== 6) params.set('size', pageSize);
     const hash = `#${route}${params.size ? `?${params}` : ''}`;
-    if (location.hash !== hash) history[replace ? 'replaceState' : 'pushState'](null, '', hash);
+    if (isDetailsUrl() && location.protocol === 'file:') { location.href = `index.html${hash}`; return; }
+    if (location.hash !== hash || isDetailsUrl()) history[replace ? 'replaceState' : 'pushState'](null, '', isDetailsUrl() ? `index.html${hash}` : hash);
   }
   function changeCatalog(focusSelector, resetPage = true) {
     if (resetPage) catalogPage = 1;
@@ -267,9 +272,10 @@
   }
   function render() {
     updateShell();
-    main.innerHTML = ({ overview, explore: () => catalog(), favorites: () => catalog(true), learning, profile, ...workspace.pages })[route]();
+    main.innerHTML = ({ details: () => renderDetails(detailsData), overview, explore: () => catalog(), favorites: () => catalog(true), learning, profile, ...workspace.pages })[route]();
     if (route === 'overview') $('.overview-middle', main).insertAdjacentHTML('afterend', workspace.overview());
     if (route === 'profile') $('.page-heading', main).insertAdjacentHTML('afterend', `<section class="panel appearance-settings"><div class="appearance-settings-copy"><span class="appearance-settings-icon">${icon('sun')}</span><div><h2>Appearance</h2><p>Your workspace, your way. <span data-appearance-summary></span></p></div></div><button class="button button-light" data-action="preferences">Preferences ${icon('chevron')}</button></section>`);
+    if (route === 'details' && detailsData.course) document.title = `${detailsData.course.title} · MyCourses`;
     syncAppearance();
     if (['explore', 'favorites'].includes(route)) $('#catalog-status').textContent = `${$('.results-label', main).textContent}. Page ${catalogPage} of ${Math.max(1, Math.ceil(filteredCourses(route === 'favorites').length / pageSize))}.`;
     if (route === 'explore' && query.trim()) $('.page-heading', main).insertAdjacentHTML('afterend', workspace.searchResults(query));
@@ -285,7 +291,13 @@
   }
   function navigate() {
     const requested = location.hash.slice(1).split('?')[0];
-    route = Object.hasOwn(pageNames, requested) ? requested : 'overview';
+    route = isDetailsUrl() && !requested ? 'details' : Object.hasOwn(pageNames, requested) && requested !== 'details' ? requested : 'overview';
+    if (isDetailsUrl() && route !== 'details') {
+      if (location.protocol === 'file:') { location.replace(`index.html${location.hash}`); return; }
+      history.replaceState(null, '', `index.html${location.hash}`);
+    }
+    detailsRequest++;
+    if (route === 'details') loadCourseDetails();
     category = 'All courses'; level = 'All levels'; sort = 'recommended';
     query = ''; catalogPage = 1; pageSize = 6;
     if (['explore', 'favorites'].includes(route)) {
@@ -312,11 +324,30 @@
     $('.dialog-header .icon-button', dialog)?.focus();
   }
   function dialogHeader(title, eyebrow = '') { return `<div class="dialog-header"><div>${eyebrow ? `<div class="eyebrow">${eyebrow}</div>` : ''}<h2 id="dialog-title">${title}</h2></div><button class="icon-button" data-action="close" aria-label="Close dialog">${icon('close')}</button></div>`; }
+  async function loadCourseDetails() {
+    const request = ++detailsRequest;
+    const id = new URLSearchParams(location.search).get('id')?.trim();
+    detailsData = { status: id ? 'loading' : 'missing' };
+    if (!id) { render(); return; }
+    render();
+    try {
+      const [course, courseLessons] = await Promise.all([
+        window.STUDIO_COURSE_SERVICE.getCourse(id),
+        window.STUDIO_COURSE_SERVICE.getLessons(id)
+      ]);
+      if (request !== detailsRequest || route !== 'details') return;
+      detailsData = course ? { status: 'ready', course, lessons: courseLessons } : { status: 'missing' };
+    } catch {
+      if (request !== detailsRequest || route !== 'details') return;
+      detailsData = { status: 'error' };
+    }
+    render();
+  }
   function openDetails(id) {
-    const course = courses.find(item => item.id === id); if (!course) return;
-    dialogCourse = id;
-    const isEnrolled = !!state.enrollments[id];
-    openDialog(`${dialogHeader(course.title, `${course.category} / ${course.level}`)}<div class="dialog-body"><div class="dialog-course-art">${courseArt(course, false)}</div><div class="detail-meta"><span>${icon('user')}${course.instructor}</span><span>${icon('clock')}${course.hours} hour learning path</span><span>${icon('book')}${course.topics.length} reading lessons</span></div><p>${course.description}</p><div class="outcome"><strong>What you’ll build</strong>${course.outcome}</div><h3>Your course roadmap</h3><ol class="curriculum">${course.topics.map((topic, index) => `<li>${isEnrolled ? `<button data-action="lesson" data-id="${id}" data-index="${index}">` : '<div class="curriculum-item">'}<span class="lesson-number">${String(index + 1).padStart(2, '0')}</span>${topic}${state.enrollments[id]?.completed.includes(index) ? icon('check') : icon('book')}${isEnrolled ? '</button>' : '</div>'}</li>`).join('')}</ol><p>Self-paced demo course with short readings, code examples, and practice prompts. Suggested hours include independent practice.</p><div class="dialog-actions"><button class="button button-primary" data-action="${isEnrolled ? 'resume' : 'enroll'}" data-id="${id}">${isEnrolled ? progress(course) === 100 ? 'Review course' : 'Continue learning' : 'Start learning · Free'} ${icon('arrow')}</button><button class="button button-light" data-action="favorite" data-id="${id}" aria-pressed="${state.favorites.includes(id)}">${icon('heart')}${state.favorites.includes(id) ? 'Saved' : 'Save course'}</button></div></div>`);
+    const url = `course-details.html?id=${encodeURIComponent(id)}`;
+    if (location.protocol === 'file:') { location.href = url; return; }
+    history.pushState(null, '', url);
+    navigate();
   }
   function openLesson(id, index) {
     const course = courses.find(item => item.id === id);
@@ -349,6 +380,7 @@
     (target || main).focus({ preventScroll: true });
   }
   document.addEventListener('click', event => {
+    if (event.target.closest('.skip-link')) { event.preventDefault(); main.focus(); return; }
     const control = event.target.closest('[data-action]'); if (!control) return;
     const { action, id } = control.dataset;
     switch (action) {
@@ -372,13 +404,19 @@
       case 'page-size': pageSize = Number(control.dataset.size); changeCatalog(`[data-action="page-size"][data-size="${pageSize}"]`); break;
       case 'learning-tab': learningTab = control.dataset.tab; render(); restoreFocus(action, null, learningTab); break;
       case 'reset-filters': category = 'All courses'; level = 'All levels'; query = ''; sort = 'recommended'; $('#global-search').value = ''; changeCatalog('#global-search'); break;
-      case 'details': openDetails(id); break;
+      case 'retry-course': loadCourseDetails(); break;
+      case 'details':
+        if (control.tagName === 'A') {
+          if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) break;
+          event.preventDefault();
+        }
+        openDetails(id); break;
       case 'favorite': {
         if (!courses.some(course => course.id === id)) break;
         const saved = state.favorites.includes(id);
         state.favorites = saved ? state.favorites.filter(value => value !== id) : [...state.favorites, id];
         persist(); render();
-        if (dialog.open) openDetails(id); else restoreFocus(action, id);
+        restoreFocus(action, id);
         saveMessage(saved ? 'Removed from your favorites.' : 'Saved for your next curious day.');
         break;
       }
@@ -451,8 +489,9 @@
   });
   $('#global-search').addEventListener('input', event => {
     query = event.target.value; category = 'All courses'; level = 'All levels';
+    if (isDetailsUrl() && location.protocol === 'file:') { location.href = `index.html#explore?q=${encodeURIComponent(query)}`; return; }
     if (route !== 'explore') {
-      route = 'explore'; history.pushState(null, '', '#explore'); window.scrollTo(0, 0);
+      route = 'explore'; history.pushState(null, '', isDetailsUrl() ? 'index.html#explore' : '#explore'); window.scrollTo(0, 0);
     }
     catalogPage = 1; syncCatalogUrl(true); render();
   });
@@ -478,6 +517,7 @@
   });
   dialog.addEventListener('close', () => { dialogCourse = null; if (dialogOpener?.isConnected) dialogOpener.focus(); else main.focus({ preventScroll: true }); });
   window.addEventListener('hashchange', navigate);
+  window.addEventListener('popstate', navigate);
   window.addEventListener('storage', event => { if (event.key === storageKey || event.key === null) { state = loadState(); render(); if (dialog.open) dialog.close(); } });
   matchMedia('(max-width: 700px)').addEventListener('change', () => setNavigation(false));
   const workspace = window.createStudioWorkspace({
