@@ -6,11 +6,14 @@ A standalone redesign of the course dashboard. **The redesign implementation liv
 
 Open the root `index.html` directly in a modern browser, or use your existing static development server and visit the project root. It automatically opens `learning-studio/index.html`. You can also visit `/learning-studio/` directly. No installation or build is required.
 
+Signed-out visitors see `sign-in.html`. Choose **Explore the demo**, use `alex.morgan@example.com` / `learn-together`, or choose **Create an account** to register a local learner. `sign-up.html` and `register.html` open the same registration flow. All three auth screens also have root entry points.
+
 The root entry point is a small redirect so the implementation stays isolated. Both static hosting under a subdirectory and direct file opening are supported. The previous root page remains available in Git history.
 
 ## Included
 
 - Responsive sidebar, mobile drawer, overview dashboard, and header search (Ctrl/Cmd K).
+- Matching sign-in, registration, and signed-out pages with form validation, password visibility, password confirmation, duplicate-email handling, and shared appearance. Sidebar and Profile include Sign out links.
 - Header sun/moon toggle and My profile → Preferences with Light, Dark, and System appearance. System is the default, follows device changes live, and a saved choice applies before rendering.
 - Explore courses with category and level filters, sorting, global text search, course details, and useful empty states.
 - Dedicated `course-details.html?id=html` page with course overview, instructor, expandable lesson roadmap, enrollment, favorites, and saved progress. Course links share and refresh directly, with loading, retry, missing-course, and no-lessons states.
@@ -30,6 +33,10 @@ The root entry point is a small redirect so the implementation stays isolated. B
 | File | Responsibility |
 | --- | --- |
 | `index.html` | Document, application shell, navigation, global search |
+| `sign-in.html`, `sign-up.html`, `sign-out.html` | Responsive local account screens; `register.html` aliases sign-up |
+| `auth-service.js` | Local registration, password verification, session storage, return URL validation, and account-specific storage keys |
+| `auth-guard.js` | Signed-out navigation and cross-tab account changes |
+| `auth.js`, `auth.css` | Authentication form interactions and shared presentation |
 | `styles.css` | Design tokens, components, responsive and accessibility styles |
 | `courses.js` | Independent catalog and reading lesson content |
 | `course-details.html` | Details entry point using the existing application shell (also linked from the root redirect) |
@@ -45,6 +52,7 @@ The root entry point is a small redirect so the implementation stays isolated. B
 | `assets/brand.svg` | Local vector brand mark |
 | `verify.cjs` | Browser verification; see below |
 | `verify-course-details.cjs` | Details links, history, page states, learning actions, file opening, and responsive theme checks |
+| `verify-auth.cjs`, `verify-registration.cjs` | Local account lifecycle, validation, account separation, storage errors, navigation, and responsive auth pages |
 | `verify-workspace.cjs` | Connected workspace behavior checks invoked by `verify.cjs` |
 | `verify-appearance.cjs` | Theme persistence, device changes, keyboard controls, storage fallback and dark layouts |
 
@@ -52,9 +60,11 @@ The root entry point is a small redirect so the implementation stays isolated. B
 
 Course Details continues to use `STUDIO_COURSES` and `STUDIO_LESSONS` from `courses.js`. The local service maps lesson tuples into named fields before rendering; the existing course UI model and IDs are preserved. The Education API is intentionally not connected in this UI iteration. The application controller handles loading and failures outside the renderer, so a future API adapter can replace the local service. No API response schema is assumed.
 
-The first visit uses a fictional Alex Morgan profile, two enrolled courses with sample progress, and two favorites. Ratings and instructor details are illustrative. Weekly activity starts at zero and records real completion actions in this browser. All profile inputs are escaped before rendering.
+The sample account uses a fictional Alex Morgan profile, two enrolled courses with sample progress, and two favorites. Registered local accounts start with the entered name/email and empty enrollments, favorites, progress, and workspace data. Ratings and instructor details are illustrative. Weekly activity starts at zero and records real completion actions in this browser. All profile inputs are escaped before rendering.
 
-Changes are stored under `mycourses.learning-studio.v1` in local storage. They remain local to the browser and origin, without authentication or a server. Moving between `file://` and a server gives you a separate storage context. Browsers that restrict storage still allow in-memory use, with a warning when changes cannot persist. Clear this one storage key in browser developer tools to reset the demo.
+The sample account stores changes under `mycourses.learning-studio.v1` in local storage. Registered accounts append their generated account ID to this key and to `mycourses.workspace.v1`, keeping their saved learning separate. Moving between `file://` and a server gives you a separate storage context. Signing out preserves saved learning data. Browsers that restrict storage can explore the demo with a tab session when session storage is available; registration requires local storage.
+
+This is a local UI prototype, not server authentication. Accounts are stored in `mycourses.local-accounts.v1`, and the active account ID in `mycourses.demo-session.v1`. Passwords are stored as salted PBKDF2-SHA-256 verifiers (210,000 iterations), never plaintext. The client-side guard and local data can be modified through browser tools; a production account system needs a backend. There is no email delivery, account recovery, or online account creation. Registration uses Web Crypto and requires HTTPS, localhost, or a browser that supports it for local files. The profile keeps a registered account's sign-in email read-only.
 
 The planner, notebook, and joined learning paths use a separate key, `mycourses.workspace.v1`. Existing profiles and course progress are preserved when upgrading. The workspace starts with no invented sessions or notes; create your own from the planner or a lesson. Clear both keys to reset the complete demo.
 
@@ -86,3 +96,5 @@ Optionally set `STUDIO_BROWSER_PATH` to the browser executable and `STUDIO_PLAYW
 Set `STUDIO_CATALOG_ONLY=1` to run only the category and pagination checks.
 
 Set `STUDIO_DETAILS_ONLY=1` to run only the Course Details checks. When `STUDIO_SCREENSHOT_DIR` is set, these checks also capture desktop and mobile details pages in light and dark themes.
+
+Set `STUDIO_AUTH_ONLY=1` to run only sign-in/sign-out and registration checks. Auth screenshots are included when `STUDIO_SCREENSHOT_DIR` is set. The existing workspace suites use an authenticated sample-account fixture.

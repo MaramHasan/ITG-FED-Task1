@@ -49,6 +49,12 @@
 .auth-divider:before,.auth-divider:after { content:''; height:1px; background:var(--line); flex:1; }
 .auth-demo-button { width:100%; min-height:47px; display:flex; align-items:center; justify-content:center; gap:10px; background:var(--white); font-size:12px; }
 .auth-demo-note { font-size:11px; color:var(--muted); text-align:center; line-height:1.8; margin-top:14px; }
+.auth-switch { font-size:12px; color:var(--muted); margin:0 0 20px; }
+.auth-switch a { color:var(--green); font-weight:650; text-decoration:underline; text-underline-offset:3px; }
+.auth-hint { color:var(--muted); font-size:10px; margin-top:6px; }
+[data-auth-page="sign-up"] .auth-main { max-width:420px; padding-top:25px; padding-bottom:25px; }
+[data-auth-page="sign-up"] .auth-intro { margin-bottom:22px; }
+[data-auth-page="sign-up"] .auth-form { gap:15px; }
 .auth-demo-details { margin-top:20px; border:1px solid var(--line); border-radius:9px; background:var(--white); font-size:11px; }
 .auth-demo-details summary { cursor:pointer; padding:12px 15px; color:var(--muted); }
 .auth-demo-details p { padding:0 15px 13px; color:var(--muted); overflow-wrap:anywhere; }

@@ -24,7 +24,10 @@ const server = http.createServer((req, res) => {
   try {
     const defaultBrowser = process.platform === 'win32' ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' : undefined;
     browser = await chromium.launch({ headless: true, executablePath: process.env.STUDIO_BROWSER_PATH || defaultBrowser });
-    if (!process.env.STUDIO_CATALOG_ONLY && !process.env.STUDIO_DETAILS_ONLY) await require('./verify-auth.cjs')({ browser, address });
+    if (!process.env.STUDIO_CATALOG_ONLY && !process.env.STUDIO_DETAILS_ONLY) {
+      await require('./verify-auth.cjs')({ browser, address });
+      await require('./verify-registration.cjs')({ browser, address });
+    }
     if (process.env.STUDIO_AUTH_ONLY === '1') return;
     // Existing workspace checks start with an authenticated demo fixture.
     const newContext = browser.newContext.bind(browser);

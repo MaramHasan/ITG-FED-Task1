@@ -3,7 +3,7 @@
 
   const courses = window.STUDIO_COURSES;
   const lessons = window.STUDIO_LESSONS;
-  const storageKey = 'mycourses.learning-studio.v1';
+  const storageKey = window.STUDIO_AUTH.storageKey('mycourses.learning-studio.v1');
   const $ = (selector, root = document) => root.querySelector(selector);
   const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
   const icons = {
@@ -46,6 +46,11 @@
   let storageAvailable = true;
   function loadState() {
     const fallback = defaults();
+    const account = window.STUDIO_AUTH.account;
+    if (account && account.id !== 'studio-demo') {
+      fallback.profile = { name: account.name, email: account.email, role: 'Curious learner', bio: '', goal: 5 };
+      fallback.favorites = []; fallback.enrollments = {}; fallback.activity = [];
+    }
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey));
       if (!saved || typeof saved !== 'object') return fallback;
@@ -276,7 +281,15 @@
     if (route === 'overview') $('.overview-middle', main).insertAdjacentHTML('afterend', workspace.overview());
     if (route === 'profile') $('.page-heading', main).insertAdjacentHTML('afterend', `<section class="panel appearance-settings"><div class="appearance-settings-copy"><span class="appearance-settings-icon">${icon('sun')}</span><div><h2>Appearance</h2><p>Your workspace, your way. <span data-appearance-summary></span></p></div></div><button class="button button-light" data-action="preferences">Preferences ${icon('chevron')}</button></section>`);
     if (route === 'details' && detailsData.course) document.title = `${detailsData.course.title} · MyCourses`;
-    if (route === 'profile') main.insertAdjacentHTML('beforeend', `<section class="panel session-panel"><div><h2>Your session</h2><p>You’re exploring the demo workspace. Your courses, notes, and progress stay saved in this browser when you sign out.</p></div><a href="sign-out.html" class="button button-light">Sign out ${icon('external')}</a></section>`);
+    if (route === 'profile') {
+      main.insertAdjacentHTML('beforeend', `<section class="panel session-panel"><div><h2>Your session</h2><p>Your courses, notes, and progress stay saved in this browser when you sign out.</p></div><a href="sign-out.html" class="button button-light">Sign out ${icon('external')}</a></section>`);
+      if (window.STUDIO_AUTH.account?.id !== 'studio-demo') {
+        const email = $('#profile-form [name="email"]');
+        email.readOnly = true;
+        email.setAttribute('aria-describedby', 'profile-email-hint');
+        email.insertAdjacentHTML('afterend', '<small id="profile-email-hint">Your sign-in email for this local account.</small>');
+      }
+    }
     syncAppearance();
     if (['explore', 'favorites'].includes(route)) $('#catalog-status').textContent = `${$('.results-label', main).textContent}. Page ${catalogPage} of ${Math.max(1, Math.ceil(filteredCourses(route === 'favorites').length / pageSize))}.`;
     if (route === 'explore' && query.trim()) $('.page-heading', main).insertAdjacentHTML('afterend', workspace.searchResults(query));

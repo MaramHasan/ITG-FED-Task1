@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#171c23">
+  <meta name="description" content="Welcome back to Learning Studio. A little learning, a little progress, every day.">
+  <title>Create account · MyCourses</title>
+  <script src="appearance.js"></script>
+  <script src="auth-service.js"></script>
+  <link rel="icon" href="assets/brand.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="atelier.css">
+  <link rel="stylesheet" href="appearance.css">
+  <link rel="stylesheet" href="auth.css">
+  <script src="auth.js" defer></script>
+</head>
+<body class="auth-page" data-auth-page="sign-up">
+  <a class="skip-link" href="#auth-main">Skip to registration</a>
+  <div class="auth-shell">
+    <aside class="auth-story" aria-label="Learning Studio">
+      <a class="brand" href="index.html"><img src="assets/brand.svg" alt="" width="35" height="35">MyCourses<span class="brand-dot">.</span></a>
+      <div class="auth-story-copy">
+        <div class="auth-eyebrow">THE LEARNING STUDIO</div>
+        <h2>Big things.<br> Small beginnings.<br> <em>Your next chapter.</em></h2>
+        <p>A space to follow your curiosity, build something meaningful, and grow a little every day.</p>
+        <div class="auth-art" aria-hidden="true">
+          <div class="auth-art-card"><div class="auth-art-caption">A LITTLE PROGRESS, EVERY DAY</div><strong>Learn. Make. Keep growing.</strong><div class="auth-art-steps"><i>✓</i><b></b><i>✓</i><b></b><i>✦</i></div></div>
+          <div class="auth-art-badge">✦ &nbsp; Made for your next chapter.</div>
+        </div>
+      </div>
+      <div class="auth-story-footer"><span aria-hidden="true">✳</span><span>At your own pace. In your own direction.</span></div>
+    </aside>
+    <div class="auth-content">
+      <div class="auth-utilities"><span>Your workspace, your way.</span><button class="icon-button" data-auth-theme aria-label="Switch to dark mode">☾</button></div>
+      <main class="auth-main" id="auth-main" tabindex="-1">
+        <div class="auth-eyebrow">EVERY CHAPTER STARTS SOMEWHERE</div>
+        <h1>Make room to grow.</h1>
+        <p class="auth-switch">Already have an account? <a href="sign-in.html" data-auth-link>Sign in <span aria-hidden="true">→</span></a></p>
+        <p class="auth-intro">Create your account and make this space yours.<br>A little curiosity is all you need to begin.</p>
+        <div class="auth-error" id="auth-error" role="alert" tabindex="-1" hidden></div>
+        <form class="auth-form" id="signup-form" novalidate>
+          <div class="auth-field"><label for="full-name">Full name</label><div class="auth-input"><input id="full-name" name="name" autocomplete="name" placeholder="What should we call you?" required maxlength="60" aria-describedby="full-name-error"></div><span class="auth-field-error" id="full-name-error"></span></div>
+          <div class="auth-field"><label for="email">Email address</label><div class="auth-input"><input id="email" name="email" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" required maxlength="100" aria-describedby="email-error"></div><span class="auth-field-error" id="email-error"></span></div>
+          <div class="auth-field"><label for="password">Password</label><div class="auth-input"><input id="password" name="password" type="password" autocomplete="new-password" placeholder="Create a password" required minlength="8" maxlength="128" aria-describedby="password-hint password-error"><button id="reveal-password" type="button" aria-label="Show password" aria-pressed="false">Show</button></div><p class="auth-hint" id="password-hint">Use at least 8 characters. Choose a password just for this demo.</p><span class="auth-field-error" id="password-error"></span></div>
+          <div class="auth-field"><label for="confirm-password">Confirm password</label><div class="auth-input"><input id="confirm-password" name="confirm-password" type="password" autocomplete="new-password" placeholder="Enter your password again" required maxlength="128" aria-describedby="confirm-password-error"></div><span class="auth-field-error" id="confirm-password-error"></span></div>
+          <button class="button auth-primary" id="signup-submit" type="submit">Create account</button>
+        </form>
+        <p class="auth-demo-note">Your account and learning data stay in this browser.<br>No email verification or online account is created.</p>
+        <div class="auth-divider">A LITTLE CURIOUS FIRST?</div>
+        <button class="button button-light auth-demo-button" id="demo-signin" type="button">Explore the demo <span aria-hidden="true">→</span></button>
+      </main>
+      <footer class="auth-footer"><span>Made for your next chapter.</span><span>MyCourses ✦ Keep growing.</span></footer>
+    </div>
+  </div>
+  <noscript><div class="noscript">Enable JavaScript to create an account to the demo workspace.</div></noscript>
+</body>
+</html>

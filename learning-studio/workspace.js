@@ -7,7 +7,7 @@ window.createStudioWorkspace = function createStudioWorkspace(app) {
   'use strict';
   const { courses, icon, escape: esc, heading, empty, localDate, progress, completed } = app;
   const $ = selector => document.querySelector(selector);
-  const key = 'mycourses.workspace.v1';
+  const key = window.STUDIO_AUTH.storageKey('mycourses.workspace.v1');
   const paths = [
     { id: 'frontend', title: 'Become a frontend builder', category: 'Frontend development', color: 'mint', symbol: '</>', description: 'From your first page to your first React app. Build the skills to bring thoughtful interfaces to life.', courses: ['html', 'css', 'javascript', 'react'], project: 'A responsive, interactive portfolio', skills: ['Semantic HTML', 'Responsive layouts', 'JavaScript', 'React'] },
     { id: 'backend', title: 'Build behind the scenes', category: 'Backend development', color: 'lavender', symbol: '{ }', description: 'Connect the pieces that power a product. Learn a language, build a service, and design an API that lasts.', courses: ['csharp', 'aspnet', 'api'], project: 'A well-structured course catalog API', skills: ['C#', 'ASP.NET Core', 'HTTP', 'API contracts'] },
